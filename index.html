@@ -18,6 +18,17 @@
               <button id="resetButton" type="button">重置</button>
             </div>
           </div>
+          <div class="preset-bar">
+            <div class="preset-copy">
+              <span class="preset-label">场景模式</span>
+              <strong id="presetTitle">自定义调参</strong>
+            </div>
+            <div class="preset-buttons">
+              <button class="preset-button active" type="button" data-mode="custom">自定义</button>
+              <button class="preset-button" type="button" data-mode="electric-only">仅电场</button>
+              <button class="preset-button" type="button" data-mode="magnetic-only">仅磁场</button>
+            </div>
+          </div>
           <div class="canvas-wrap">
             <canvas id="simCanvas" width="980" height="640" aria-label="带电粒子运动轨迹"></canvas>
           </div>
@@ -96,6 +107,7 @@
               </div>
               <strong id="electricValue">+3.0 ×10^5 N/C</strong>
             </div>
+            <div class="mode-hint" id="electricHint"></div>
             <input id="electricInput" type="range" min="-24" max="24" step="0.5" value="3" />
           </label>
 
@@ -116,6 +128,7 @@
               </div>
               <strong id="magneticValue">0.00 T</strong>
             </div>
+            <div class="mode-hint" id="magneticHint"></div>
             <input id="magneticInput" type="range" min="-8" max="8" step="0.25" value="0" />
           </label>
 
@@ -164,6 +177,85 @@
             </div>
             <input id="angleInput" type="range" min="-85" max="85" step="1" value="0" />
           </label>
+
+          <section class="metrics-panel">
+            <div class="metrics-head">
+              <span class="preset-label">实时物理量</span>
+              <strong id="metricsModeTitle">当前场景</strong>
+            </div>
+            <div class="metrics-grid">
+              <article class="metric-card">
+                <span class="metric-name">
+                  <math>
+                    <msub><mi>F</mi><mi>E</mi></msub>
+                  </math>
+                </span>
+                <strong id="electricForceMetric">0 N</strong>
+              </article>
+              <article class="metric-card">
+                <span class="metric-name">
+                  <math>
+                    <msub><mi>F</mi><mi>B</mi></msub>
+                  </math>
+                </span>
+                <strong id="magneticForceMetric">0 N</strong>
+              </article>
+              <article class="metric-card">
+                <span class="metric-name">
+                  <math>
+                    <mi>v</mi>
+                  </math>
+                </span>
+                <strong id="speedMetric">0 m/s</strong>
+              </article>
+              <article class="metric-card">
+                <span class="metric-name">
+                  <math>
+                    <msub><mi>F</mi><mtext>合</mtext></msub>
+                  </math>
+                </span>
+                <strong id="netForceMetric">0 N</strong>
+              </article>
+              <article class="metric-card">
+                <span class="metric-name">
+                  <math>
+                    <mi>r</mi>
+                  </math>
+                </span>
+                <strong id="radiusMetric">--</strong>
+              </article>
+              <article class="metric-card">
+                <span class="metric-name">
+                  <math>
+                    <mi>T</mi>
+                  </math>
+                </span>
+                <strong id="periodMetric">--</strong>
+              </article>
+            </div>
+            <p class="metrics-note" id="metricsNote">当前显示的是单粒子在所选场景下的瞬时物理量。</p>
+          </section>
+
+          <section class="display-panel">
+            <div class="metrics-head">
+              <span class="preset-label">显示选项</span>
+              <strong>画面控制</strong>
+            </div>
+            <div class="toggle-grid">
+              <label class="toggle-item">
+                <input id="showGridToggle" type="checkbox" checked />
+                <span>显示网格</span>
+              </label>
+              <label class="toggle-item">
+                <input id="showTrailToggle" type="checkbox" checked />
+                <span>显示轨迹</span>
+              </label>
+              <label class="toggle-item">
+                <input id="showVectorsToggle" type="checkbox" checked />
+                <span>显示箭头</span>
+              </label>
+            </div>
+          </section>
         </aside>
       </section>
     </main>

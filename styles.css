@@ -49,7 +49,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .stage-head h1 {
@@ -88,6 +88,53 @@ button.primary {
   background: #fbfcfa;
 }
 
+.preset-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(19, 31, 35, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.preset-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 126px;
+}
+
+.preset-label {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.preset-copy strong {
+  font-size: 1rem;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.preset-button {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 0.92rem;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.preset-button.active {
+  color: #f7fbf9;
+  background: var(--accent);
+  border-color: transparent;
+}
+
 #simCanvas {
   display: block;
   width: 100%;
@@ -109,6 +156,97 @@ button.primary {
 
 .control + .control {
   margin-top: 16px;
+}
+
+.metrics-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(19, 31, 35, 0.08);
+}
+
+.metrics-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.metrics-head strong {
+  font-size: 1rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(19, 31, 35, 0.08);
+}
+
+.metric-name {
+  display: block;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.metric-name math {
+  font-family: "Times New Roman", "Cambria Math", serif;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.metrics-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.display-panel {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(19, 31, 35, 0.08);
+}
+
+.toggle-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(19, 31, 35, 0.08);
+  cursor: pointer;
+}
+
+.toggle-item span {
+  font-size: 0.94rem;
+}
+
+.toggle-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
 }
 
 .label-row {
@@ -146,6 +284,23 @@ button.primary {
 
 .label-math math {
   font-family: "Times New Roman", "Cambria Math", serif;
+}
+
+.mode-hint {
+  min-height: 1.1rem;
+  margin: -4px 0 10px;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+input[type="range"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+  border-color: rgba(18, 31, 36, 0.45);
+  box-shadow: none;
 }
 
 input[type="range"] {
@@ -189,6 +344,16 @@ input[type="range"]::-webkit-slider-thumb {
     align-items: flex-start;
   }
 
+  .preset-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px;
+  }
+
+  .preset-buttons {
+    justify-content: flex-start;
+  }
+
   .actions {
     width: 100%;
   }
@@ -199,6 +364,10 @@ input[type="range"]::-webkit-slider-thumb {
 
   .control {
     padding: 16px 14px 14px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
   }
 
   .label-row strong {
