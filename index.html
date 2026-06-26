@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>带电粒子轨迹实验台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="workspace">
+        <div class="stage">
+          <div class="stage-head">
+            <h1>带电粒子轨迹实验台</h1>
+            <div class="actions">
+              <button id="startButton" class="primary" type="button">开始</button>
+              <button id="pauseButton" type="button">暂停</button>
+              <button id="resetButton" type="button">重置</button>
+            </div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="simCanvas" width="980" height="640" aria-label="带电粒子运动轨迹"></canvas>
+          </div>
+        </div>
+
+        <aside class="controls">
+          <label class="control">
+            <div class="label-row">
+              <div class="label-copy">
+                <span class="label-title">电荷量</span>
+                <span class="label-math">
+                  <math>
+                    <mi>q</mi>
+                    <mo>/</mo>
+                    <mi>e</mi>
+                  </math>
+                </span>
+              </div>
+              <strong id="chargeValue">+1 e</strong>
+            </div>
+            <input id="chargeInput" type="range" min="-6" max="6" step="1" value="1" />
+          </label>
+
+          <label class="control">
+            <div class="label-row">
+              <div class="label-copy">
+                <span class="label-title">质量</span>
+                <span class="label-math">
+                  <math>
+                    <mi>m</mi>
+                    <mo>/</mo>
+                    <mrow>
+                      <mo>(</mo>
+                      <mo>&times;</mo>
+                      <msup>
+                        <mn>10</mn>
+                        <mrow>
+                          <mo>-</mo>
+                          <mn>27</mn>
+                        </mrow>
+                      </msup>
+                      <mtext> kg</mtext>
+                      <mo>)</mo>
+                    </mrow>
+                  </math>
+                </span>
+              </div>
+              <strong id="massValue">1.5 ×10^-27 kg</strong>
+            </div>
+            <input id="massInput" type="range" min="0.5" max="10" step="0.5" value="1.5" />
+          </label>
+
+          <label class="control">
+            <div class="label-row">
+              <div class="label-copy">
+                <span class="label-title">电场强度</span>
+                <span class="label-math">
+                  <math>
+                    <msub>
+                      <mi>E</mi>
+                      <mi>y</mi>
+                    </msub>
+                    <mo>/</mo>
+                    <mrow>
+                      <mo>(</mo>
+                      <mo>&times;</mo>
+                      <msup>
+                        <mn>10</mn>
+                        <mn>5</mn>
+                      </msup>
+                      <mtext> N/C</mtext>
+                      <mo>)</mo>
+                    </mrow>
+                  </math>
+                </span>
+              </div>
+              <strong id="electricValue">+3.0 ×10^5 N/C</strong>
+            </div>
+            <input id="electricInput" type="range" min="-24" max="24" step="0.5" value="3" />
+          </label>
+
+          <label class="control">
+            <div class="label-row">
+              <div class="label-copy">
+                <span class="label-title">磁感应强度</span>
+                <span class="label-math">
+                  <math>
+                    <msub>
+                      <mi>B</mi>
+                      <mi>z</mi>
+                    </msub>
+                    <mo>/</mo>
+                    <mi>T</mi>
+                  </math>
+                </span>
+              </div>
+              <strong id="magneticValue">0.00 T</strong>
+            </div>
+            <input id="magneticInput" type="range" min="-8" max="8" step="0.25" value="0" />
+          </label>
+
+          <label class="control">
+            <div class="label-row">
+              <div class="label-copy">
+                <span class="label-title">初速度</span>
+                <span class="label-math">
+                  <math>
+                    <msub>
+                      <mi>v</mi>
+                      <mn>0</mn>
+                    </msub>
+                    <mo>/</mo>
+                    <mrow>
+                      <mo>(</mo>
+                      <mo>&times;</mo>
+                      <msup>
+                        <mn>10</mn>
+                        <mn>6</mn>
+                      </msup>
+                      <mtext> m/s</mtext>
+                      <mo>)</mo>
+                    </mrow>
+                  </math>
+                </span>
+              </div>
+              <strong id="speedValue">8.0 ×10^6 m/s</strong>
+            </div>
+            <input id="speedInput" type="range" min="1" max="28" step="0.5" value="8" />
+          </label>
+
+          <label class="control">
+            <div class="label-row">
+              <div class="label-copy">
+                <span class="label-title">入射角</span>
+                <span class="label-math">
+                  <math>
+                    <mi>&theta;</mi>
+                    <mo>/</mo>
+                    <mo>&deg;</mo>
+                  </math>
+                </span>
+              </div>
+              <strong id="angleValue">0°</strong>
+            </div>
+            <input id="angleInput" type="range" min="-85" max="85" step="1" value="0" />
+          </label>
+        </aside>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
