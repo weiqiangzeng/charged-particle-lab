@@ -297,6 +297,22 @@
                     </span>
                     <strong id="periodMetric">--</strong>
                   </article>
+                  <article class="metric-card">
+                    <span class="metric-name">
+                      <math>
+                        <mi>t</mi>
+                      </math>
+                    </span>
+                    <strong id="timeMetric">0 μs</strong>
+                  </article>
+                  <article class="metric-card">
+                    <span class="metric-name">
+                      <math>
+                        <msub><mi>t</mi><mtext>max</mtext></msub>
+                      </math>
+                    </span>
+                    <strong id="maxTimeMetric">8.0 μs</strong>
+                  </article>
                 </div>
                 <p class="metrics-note" id="metricsNote">当前显示的是单粒子在所选场景下的瞬时物理量。</p>
               </section>
@@ -348,6 +364,13 @@
                     <button class="speed-button" type="button" data-speed="0.25">0.25x</button>
                     <button class="speed-button" type="button" data-speed="0.5">0.5x</button>
                     <button class="speed-button active" type="button" data-speed="1">1x</button>
+                  </div>
+                </div>
+                <div class="speed-panel">
+                  <span class="speed-label">模拟时间边界</span>
+                  <div class="inline-edit">
+                    <input id="maxTimeNumber" class="number-input" type="number" min="0.5" max="100" step="0.5" value="8.0" />
+                    <span class="input-unit">μs</span>
                   </div>
                 </div>
                 <div class="speed-panel">

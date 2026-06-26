@@ -11,6 +11,8 @@ const state = {
   showVectors: true,
   preserveTrailOnChange: false,
   timeScale: 1,
+  simulationTime: 0,
+  maxSimulationTimeUs: 8,
   locks: {
     charge: false,
     mass: false,
@@ -73,6 +75,8 @@ const refs = {
   netForceMetric: document.getElementById("netForceMetric"),
   radiusMetric: document.getElementById("radiusMetric"),
   periodMetric: document.getElementById("periodMetric"),
+  timeMetric: document.getElementById("timeMetric"),
+  maxTimeMetric: document.getElementById("maxTimeMetric"),
   metricsNote: document.getElementById("metricsNote"),
   equationTitle: document.getElementById("equationTitle"),
   equationNote: document.getElementById("equationNote"),
@@ -82,6 +86,7 @@ const refs = {
   showVectorsToggle: document.getElementById("showVectorsToggle"),
   preserveTrailToggle: document.getElementById("preserveTrailToggle"),
   speedButtons: Array.from(document.querySelectorAll(".speed-button")),
+  maxTimeNumber: document.getElementById("maxTimeNumber"),
   overviewMode: document.getElementById("overviewMode"),
   overviewSpeed: document.getElementById("overviewSpeed"),
   lockChargeButton: document.getElementById("lockChargeButton"),
@@ -337,6 +342,8 @@ function syncReadouts() {
     metrics.radius == null ? "仅纯磁场圆周时适用" : formatScientific(metrics.radius, 2, "m");
   refs.periodMetric.textContent =
     metrics.period == null ? "仅纯磁场圆周时适用" : formatScientific(metrics.period, 2, "s");
+  refs.timeMetric.textContent = `${state.simulationTime.toFixed(2)} μs`;
+  refs.maxTimeMetric.textContent = `${state.maxSimulationTimeUs.toFixed(1)} μs`;
   refs.metricsNote.textContent = metrics.note;
   updateEquationPanel();
 }
@@ -354,6 +361,7 @@ function syncInputs() {
   refs.magneticNumber.value = state.magnetic;
   refs.speedNumber.value = state.speed;
   refs.angleNumber.value = state.angle;
+  refs.maxTimeNumber.value = state.maxSimulationTimeUs;
   refs.chargeInput.disabled = state.locks.charge;
   refs.massInput.disabled = state.locks.mass;
   refs.speedInput.disabled = state.locks.speed;
@@ -389,6 +397,7 @@ function resetParticle() {
 
 function clearTrajectory() {
   path = [{ x: 0, y: 0 }];
+  state.simulationTime = 0;
   resetParticle();
 }
 
@@ -509,9 +518,11 @@ function borisAdvance(dt) {
 function updateParticle() {
   const { dt, steps } = getStepConfig();
   const effectiveDt = dt * state.timeScale;
+  const maxSimulationTimeUs = state.maxSimulationTimeUs;
 
   for (let step = 0; step < steps; step += 1) {
     borisAdvance(effectiveDt);
+    state.simulationTime += effectiveDt * 1e6;
 
     if (!Number.isFinite(particle.x) || !Number.isFinite(particle.y)) {
       state.running = false;
@@ -519,6 +530,12 @@ function updateParticle() {
     }
 
     path.push({ x: particle.x, y: particle.y });
+
+    if (state.simulationTime >= maxSimulationTimeUs) {
+      state.running = false;
+      state.simulationTime = state.maxSimulationTimeUs;
+      return;
+    }
     if (path.length > 12000) {
       state.paused = true;
       refs.pauseButton.textContent = "继续";
@@ -933,6 +950,7 @@ function renderScene() {
 function animate() {
   if (state.running && !state.paused) {
     updateParticle();
+    syncReadouts();
   }
 
   renderScene();
@@ -1013,6 +1031,17 @@ refs.speedButtons.forEach((button) => {
     syncInputs();
     syncReadouts();
   });
+});
+
+refs.maxTimeNumber.addEventListener("change", (event) => {
+  const next = Number(event.target.value);
+  if (!Number.isFinite(next)) {
+    syncInputs();
+    return;
+  }
+  state.maxSimulationTimeUs = Math.min(100, Math.max(0.5, next));
+  syncInputs();
+  syncReadouts();
 });
 
 refs.exportPngButton.addEventListener("click", () => {
