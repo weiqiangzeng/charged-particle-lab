@@ -283,6 +283,50 @@ button.primary {
   padding: 0 18px 18px;
 }
 
+.subsection-panel {
+  margin-top: 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(19, 31, 35, 0.06);
+  overflow: hidden;
+}
+
+.subsection-panel:first-child {
+  margin-top: 0;
+}
+
+.subsection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--ink);
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.subsection-summary::-webkit-details-marker {
+  display: none;
+}
+
+.subsection-summary::after {
+  content: "+";
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.subsection-panel[open] .subsection-summary::after {
+  content: "-";
+}
+
+.subsection-body {
+  padding: 0 14px 14px;
+}
+
 .metrics-panel {
   margin-top: 18px;
   padding: 18px;
@@ -383,6 +427,10 @@ button.primary {
   border: 0;
 }
 
+.compact-panel {
+  margin-top: 0;
+}
+
 .toggle-grid {
   display: grid;
   gap: 10px;
@@ -415,6 +463,12 @@ button.primary {
   border-top: 1px solid rgba(19, 31, 35, 0.08);
 }
 
+.speed-panel.first-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .speed-label {
   display: block;
   margin-bottom: 10px;
@@ -438,6 +492,12 @@ button.primary {
 .speed-button.active {
   color: #f7fbf9;
   background: var(--accent);
+  border-color: transparent;
+}
+
+.speed-button.recording {
+  color: #fff7f4;
+  background: #b14b2c;
   border-color: transparent;
 }
 

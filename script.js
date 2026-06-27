@@ -11,6 +11,7 @@ const state = {
   showVectors: true,
   preserveTrailOnChange: false,
   timeScale: 1,
+  previousTimeScale: 1,
   simulationTime: 0,
   maxSimulationTimeUs: 8,
   locks: {
@@ -21,6 +22,7 @@ const state = {
     speed: false,
     angle: false
   },
+  isRecording: false,
   running: false,
   paused: false
 };
@@ -96,7 +98,8 @@ const refs = {
   lockSpeedButton: document.getElementById("lockSpeedButton"),
   lockAngleButton: document.getElementById("lockAngleButton"),
   exportPngButton: document.getElementById("exportPngButton"),
-  exportCsvButton: document.getElementById("exportCsvButton")
+  exportCsvButton: document.getElementById("exportCsvButton"),
+  recordVideoButton: document.getElementById("recordVideoButton")
 };
 
 const logicalWidth = 980;
@@ -111,11 +114,14 @@ ctx.scale(dpr, dpr);
 let animationFrame = 0;
 let particle = null;
 let path = [];
+let mediaRecorder = null;
+let recordedChunks = [];
 
 const ELEMENTARY_CHARGE = 1.602176634e-19;
 const ELECTRIC_FIELD_UNIT = 1e5;
 const SPEED_UNIT = 1e6;
 const MASS_UNIT = 1e-27;
+const RECORDING_TIME_SCALE = 0.5;
 const DEFAULT_VIEW = {
   minX: -4,
   maxX: 4,
@@ -332,6 +338,8 @@ function syncReadouts() {
   setLockButtonState(refs.lockMagneticButton, state.locks.magnetic);
   setLockButtonState(refs.lockSpeedButton, state.locks.speed);
   setLockButtonState(refs.lockAngleButton, state.locks.angle);
+  refs.recordVideoButton.textContent = state.isRecording ? "停止录制" : "开始录制";
+  refs.recordVideoButton.classList.toggle("recording", state.isRecording);
 
   const metrics = computeLiveMetrics();
   refs.electricForceMetric.textContent = formatScientific(metrics.electricForce, 2, "N");
@@ -1077,6 +1085,64 @@ refs.exportCsvButton.addEventListener("click", () => {
   link.download = "charged-particle-lab-data.csv";
   link.click();
   URL.revokeObjectURL(url);
+});
+
+function stopRecordingAndDownload() {
+  if (!mediaRecorder) {
+    return;
+  }
+  mediaRecorder.stop();
+}
+
+refs.recordVideoButton.addEventListener("click", () => {
+  if (state.isRecording) {
+    stopRecordingAndDownload();
+    return;
+  }
+
+  if (typeof refs.canvas.captureStream !== "function" || typeof MediaRecorder === "undefined") {
+    window.alert("当前浏览器暂不支持画布录制。");
+    return;
+  }
+
+  const stream = refs.canvas.captureStream(30);
+  recordedChunks = [];
+
+  try {
+    mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
+  } catch {
+    mediaRecorder = new MediaRecorder(stream);
+  }
+
+  mediaRecorder.ondataavailable = (event) => {
+    if (event.data && event.data.size > 0) {
+      recordedChunks.push(event.data);
+    }
+  };
+
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "charged-particle-lab-recording.webm";
+    link.click();
+    URL.revokeObjectURL(url);
+    stream.getTracks().forEach((track) => track.stop());
+    mediaRecorder = null;
+    recordedChunks = [];
+    state.isRecording = false;
+    state.timeScale = state.previousTimeScale;
+    syncReadouts();
+    syncInputs();
+  };
+
+  state.previousTimeScale = state.timeScale;
+  state.timeScale = RECORDING_TIME_SCALE;
+  mediaRecorder.start();
+  state.isRecording = true;
+  syncInputs();
+  syncReadouts();
 });
 
 function bindLockButton(button, key) {
