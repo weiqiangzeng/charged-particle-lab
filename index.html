@@ -11,7 +11,10 @@
       <section class="workspace">
         <div class="stage">
           <div class="stage-head">
-            <h1>带电粒子轨迹实验台</h1>
+            <div class="stage-title">
+              <h1>带电粒子轨迹实验台</h1>
+              <span class="demo-badge" id="demoBadge">教学演示中</span>
+            </div>
             <div class="actions">
               <button id="startButton" class="primary" type="button">开始</button>
               <button id="pauseButton" type="button">暂停</button>
@@ -31,6 +34,24 @@
           </div>
           <div class="canvas-wrap">
             <canvas id="simCanvas" width="980" height="640" aria-label="带电粒子运动轨迹"></canvas>
+          </div>
+          <div class="stage-readouts">
+            <article class="stage-readout">
+              <span>v</span>
+              <strong id="stageSpeedMetric">0 m/s</strong>
+            </article>
+            <article class="stage-readout">
+              <span>F_E</span>
+              <strong id="stageElectricForceMetric">0 N</strong>
+            </article>
+            <article class="stage-readout">
+              <span>F_B</span>
+              <strong id="stageMagneticForceMetric">0 N</strong>
+            </article>
+            <article class="stage-readout">
+              <span>F合</span>
+              <strong id="stageNetForceMetric">0 N</strong>
+            </article>
           </div>
           <div class="legend-bar">
             <span class="legend-item"><i class="legend-dot particle-dot"></i>粒子</span>
@@ -366,6 +387,10 @@
                       <label class="toggle-item">
                         <input id="showVectorsToggle" type="checkbox" checked />
                         <span>显示箭头</span>
+                      </label>
+                      <label class="toggle-item">
+                        <input id="demoModeToggle" type="checkbox" />
+                        <span>教学演示模式</span>
                       </label>
                       <label class="toggle-item">
                         <input id="preserveTrailToggle" type="checkbox" />

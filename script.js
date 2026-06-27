@@ -9,6 +9,7 @@ const state = {
   showGrid: true,
   showTrail: true,
   showVectors: true,
+  demoMode: false,
   preserveTrailOnChange: false,
   timeScale: 1,
   previousTimeScale: 1,
@@ -43,6 +44,8 @@ const modeConfigs = {
   }
 };
 
+const MAGNETIC_MODE_DEFAULT_B = 1.0;
+
 const refs = {
   chargeInput: document.getElementById("chargeInput"),
   massInput: document.getElementById("massInput"),
@@ -75,6 +78,10 @@ const refs = {
   magneticForceMetric: document.getElementById("magneticForceMetric"),
   speedMetric: document.getElementById("speedMetric"),
   netForceMetric: document.getElementById("netForceMetric"),
+  stageSpeedMetric: document.getElementById("stageSpeedMetric"),
+  stageElectricForceMetric: document.getElementById("stageElectricForceMetric"),
+  stageMagneticForceMetric: document.getElementById("stageMagneticForceMetric"),
+  stageNetForceMetric: document.getElementById("stageNetForceMetric"),
   radiusMetric: document.getElementById("radiusMetric"),
   periodMetric: document.getElementById("periodMetric"),
   timeMetric: document.getElementById("timeMetric"),
@@ -86,11 +93,13 @@ const refs = {
   showGridToggle: document.getElementById("showGridToggle"),
   showTrailToggle: document.getElementById("showTrailToggle"),
   showVectorsToggle: document.getElementById("showVectorsToggle"),
+  demoModeToggle: document.getElementById("demoModeToggle"),
   preserveTrailToggle: document.getElementById("preserveTrailToggle"),
   speedButtons: Array.from(document.querySelectorAll(".speed-button")),
   maxTimeNumber: document.getElementById("maxTimeNumber"),
   overviewMode: document.getElementById("overviewMode"),
   overviewSpeed: document.getElementById("overviewSpeed"),
+  demoBadge: document.getElementById("demoBadge"),
   lockChargeButton: document.getElementById("lockChargeButton"),
   lockMassButton: document.getElementById("lockMassButton"),
   lockElectricButton: document.getElementById("lockElectricButton"),
@@ -332,6 +341,8 @@ function syncReadouts() {
   refs.metricsModeTitle.textContent = modeConfigs[state.mode].title;
   refs.overviewMode.textContent = modeConfigs[state.mode].title;
   refs.overviewSpeed.textContent = `${state.timeScale}x`;
+  refs.startButton.textContent = state.running ? "运行中" : "开始";
+  refs.startButton.classList.toggle("primary", !state.running);
   setLockButtonState(refs.lockChargeButton, state.locks.charge);
   setLockButtonState(refs.lockMassButton, state.locks.mass);
   setLockButtonState(refs.lockElectricButton, state.locks.electric);
@@ -346,6 +357,10 @@ function syncReadouts() {
   refs.magneticForceMetric.textContent = formatScientific(metrics.magneticForce, 2, "N");
   refs.speedMetric.textContent = formatScientific(metrics.speed, 2, "m/s");
   refs.netForceMetric.textContent = formatScientific(metrics.netForce, 2, "N");
+  refs.stageElectricForceMetric.textContent = formatScientific(metrics.electricForce, 2, "N");
+  refs.stageMagneticForceMetric.textContent = formatScientific(metrics.magneticForce, 2, "N");
+  refs.stageSpeedMetric.textContent = formatScientific(metrics.speed, 2, "m/s");
+  refs.stageNetForceMetric.textContent = formatScientific(metrics.netForce, 2, "N");
   refs.radiusMetric.textContent =
     metrics.radius == null ? "仅纯磁场圆周时适用" : formatScientific(metrics.radius, 2, "m");
   refs.periodMetric.textContent =
@@ -385,10 +400,13 @@ function syncInputs() {
   refs.showGridToggle.checked = state.showGrid;
   refs.showTrailToggle.checked = state.showTrail;
   refs.showVectorsToggle.checked = state.showVectors;
+  refs.demoModeToggle.checked = state.demoMode;
   refs.preserveTrailToggle.checked = state.preserveTrailOnChange;
   refs.speedButtons.forEach((button) => {
     button.classList.toggle("active", Number(button.dataset.speed) === state.timeScale);
   });
+  document.body.classList.toggle("demo-mode", state.demoMode);
+  refs.demoBadge.textContent = state.demoMode ? "教学演示中" : "";
 }
 
 function resetParticle() {
@@ -451,6 +469,9 @@ function applyMode(modeKey) {
   }
   if (modeKey === "magnetic-only") {
     state.electric = 0;
+    if (Math.abs(state.magnetic) < 1e-12) {
+      state.magnetic = MAGNETIC_MODE_DEFAULT_B;
+    }
   }
   syncInputs();
   resetSimulation();
@@ -622,19 +643,21 @@ function niceStep(target) {
 function drawAxisTicks(bounds, origin) {
   const stepX = niceStep(bounds.spanX / 8);
   const stepY = niceStep(bounds.spanY / 8);
+  const labelFontSize = state.demoMode ? 15 : 11;
+  const tickHalf = state.demoMode ? 7 : 5;
 
   ctx.strokeStyle = "rgba(18, 31, 36, 0.18)";
   ctx.fillStyle = "rgba(18, 31, 36, 0.58)";
-  ctx.lineWidth = 1.2;
-  ctx.font = '11px "Avenir Next", "PingFang SC", sans-serif';
+  ctx.lineWidth = state.demoMode ? 1.8 : 1.2;
+  ctx.font = `${labelFontSize}px "Avenir Next", "PingFang SC", sans-serif`;
 
   const startX = Math.ceil(bounds.minX / stepX) * stepX;
   for (let value = startX; value <= bounds.maxX + stepX * 0.25; value += stepX) {
     const point = worldToCanvas({ x: value, y: 0 }, bounds);
     if (point.x < 34 || point.x > logicalWidth - 34) continue;
     ctx.beginPath();
-    ctx.moveTo(point.x, origin.y - 5);
-    ctx.lineTo(point.x, origin.y + 5);
+    ctx.moveTo(point.x, origin.y - tickHalf);
+    ctx.lineTo(point.x, origin.y + tickHalf);
     ctx.stroke();
     if (Math.abs(value) > stepX * 0.1) {
       ctx.fillText(formatTick(value), point.x - 14, origin.y + 18);
@@ -646,8 +669,8 @@ function drawAxisTicks(bounds, origin) {
     const point = worldToCanvas({ x: 0, y: value }, bounds);
     if (point.y < 18 || point.y > logicalHeight - 18) continue;
     ctx.beginPath();
-    ctx.moveTo(origin.x - 5, point.y);
-    ctx.lineTo(origin.x + 5, point.y);
+    ctx.moveTo(origin.x - tickHalf, point.y);
+    ctx.lineTo(origin.x + tickHalf, point.y);
     ctx.stroke();
     if (Math.abs(value) > stepY * 0.1) {
       ctx.fillText(formatTick(value), origin.x + 8, point.y + 4);
@@ -674,6 +697,7 @@ function formatTick(value) {
 }
 
 function drawBackground(bounds) {
+  const axisFontSize = state.demoMode ? 16 : 12;
   ctx.clearRect(0, 0, logicalWidth, logicalHeight);
   ctx.fillStyle = "#fbfcfa";
   ctx.fillRect(0, 0, logicalWidth, logicalHeight);
@@ -682,7 +706,7 @@ function drawBackground(bounds) {
     const origin = worldToCanvas({ x: 0, y: 0 }, bounds);
 
     ctx.strokeStyle = "rgba(18, 31, 36, 0.14)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = state.demoMode ? 2.8 : 2;
     ctx.beginPath();
     ctx.moveTo(30, origin.y);
     ctx.lineTo(logicalWidth - 30, origin.y);
@@ -694,7 +718,7 @@ function drawBackground(bounds) {
     ctx.stroke();
 
     ctx.fillStyle = "rgba(18, 31, 36, 0.6)";
-    ctx.font = '12px "Avenir Next", "PingFang SC", sans-serif';
+    ctx.font = `${axisFontSize}px "Avenir Next", "PingFang SC", sans-serif`;
     ctx.fillText("x / m", logicalWidth - 46, origin.y - 10);
     ctx.fillText("y / m", origin.x + 12, 20);
     return;
@@ -761,7 +785,7 @@ function drawBackground(bounds) {
   const origin = worldToCanvas({ x: 0, y: 0 }, bounds);
 
   ctx.strokeStyle = "rgba(18, 31, 36, 0.14)";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = state.demoMode ? 2.8 : 2;
   ctx.beginPath();
   ctx.moveTo(30, origin.y);
   ctx.lineTo(logicalWidth - 30, origin.y);
@@ -775,7 +799,7 @@ function drawBackground(bounds) {
   drawAxisTicks(bounds, origin);
 
   ctx.fillStyle = "rgba(18, 31, 36, 0.6)";
-  ctx.font = '12px "Avenir Next", "PingFang SC", sans-serif';
+  ctx.font = `${axisFontSize}px "Avenir Next", "PingFang SC", sans-serif`;
   ctx.fillText("x / m", logicalWidth - 46, origin.y - 10);
   ctx.fillText("y / m", origin.x + 12, 20);
 }
@@ -838,24 +862,26 @@ function drawArrow(start, vector, bounds, color, label, pixelLength) {
   if (!Number.isFinite(magnitude) || magnitude < 1e-30) {
     return;
   }
+  const arrowScale = state.demoMode ? 1.9 : 1;
+  const headLength = state.demoMode ? 12 : 8;
+  const labelFontSize = state.demoMode ? 16 : 12;
 
   const startCanvas = worldToCanvas(start, bounds);
   const unitX = vector.x / magnitude;
   const unitY = vector.y / magnitude;
   const endCanvas = {
-    x: startCanvas.x + unitX * pixelLength,
-    y: startCanvas.y - unitY * pixelLength
+    x: startCanvas.x + unitX * pixelLength * arrowScale,
+    y: startCanvas.y - unitY * pixelLength * arrowScale
   };
 
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = state.demoMode ? 3.4 : 2.2;
   ctx.beginPath();
   ctx.moveTo(startCanvas.x, startCanvas.y);
   ctx.lineTo(endCanvas.x, endCanvas.y);
   ctx.stroke();
 
-  const headLength = 8;
   const angle = Math.atan2(endCanvas.y - startCanvas.y, endCanvas.x - startCanvas.x);
   ctx.beginPath();
   ctx.moveTo(endCanvas.x, endCanvas.y);
@@ -870,8 +896,8 @@ function drawArrow(start, vector, bounds, color, label, pixelLength) {
   ctx.closePath();
   ctx.fill();
 
-  ctx.font = '12px "Avenir Next", "PingFang SC", sans-serif';
-  ctx.fillText(label, endCanvas.x + 6, endCanvas.y - 6);
+  ctx.font = `${labelFontSize}px "Avenir Next", "PingFang SC", sans-serif`;
+  ctx.fillText(label, endCanvas.x + (state.demoMode ? 10 : 8), endCanvas.y - (state.demoMode ? 10 : 8));
 }
 
 function drawVectors(bounds) {
@@ -933,13 +959,15 @@ function drawVectors(bounds) {
 
 function drawParticle(bounds) {
   const point = worldToCanvas(path.length ? path[path.length - 1] : { x: 0, y: 0 }, bounds);
+  const particleRadius = state.demoMode ? 12 : 7;
+  const chargeFontSize = state.demoMode ? 15 : 11;
   ctx.fillStyle = "#0f172a";
   ctx.beginPath();
-  ctx.arc(point.x, point.y, 7, 0, Math.PI * 2);
+  ctx.arc(point.x, point.y, particleRadius, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = '11px "Avenir Next", "PingFang SC", sans-serif';
+  ctx.font = `${chargeFontSize}px "Avenir Next", "PingFang SC", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(state.charge >= 0 ? "+" : "-", point.x, point.y);
@@ -1006,7 +1034,7 @@ refs.startButton.addEventListener("click", () => {
 refs.pauseButton.addEventListener("click", () => {
   if (!state.running) return;
   state.paused = !state.paused;
-  refs.pauseButton.textContent = state.paused ? "继续" : "暂停";
+  refs.pauseButton.textContent = state.paused ? "已暂停" : "暂停";
 });
 
 refs.resetButton.addEventListener("click", () => {
@@ -1025,6 +1053,12 @@ refs.showTrailToggle.addEventListener("change", (event) => {
 
 refs.showVectorsToggle.addEventListener("change", (event) => {
   state.showVectors = event.target.checked;
+  renderScene();
+});
+
+refs.demoModeToggle.addEventListener("change", (event) => {
+  state.demoMode = event.target.checked;
+  syncInputs();
   renderScene();
 });
 
