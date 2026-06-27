@@ -65,6 +65,13 @@ body {
   font-weight: 700;
 }
 
+.stage-subtitle {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
 .demo-badge {
   display: none;
   align-items: center;

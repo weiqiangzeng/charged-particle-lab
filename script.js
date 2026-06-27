@@ -1092,7 +1092,7 @@ refs.exportPngButton.addEventListener("click", () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "charged-particle-lab.png";
+    link.download = "charged-particle-motion-screenshot.png";
     link.click();
     URL.revokeObjectURL(url);
   });
@@ -1116,7 +1116,7 @@ refs.exportCsvButton.addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "charged-particle-lab-data.csv";
+  link.download = "charged-particle-motion-data.csv";
   link.click();
   URL.revokeObjectURL(url);
 });
@@ -1159,7 +1159,7 @@ refs.recordVideoButton.addEventListener("click", () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "charged-particle-lab-recording.webm";
+    link.download = "charged-particle-motion-recording.webm";
     link.click();
     URL.revokeObjectURL(url);
     stream.getTracks().forEach((track) => track.stop());
