@@ -3,12 +3,14 @@ const state = {
   mass: 1.5,
   electric: 3,
   magnetic: 0,
+  force: 4.8,
   speed: 8,
   angle: 0,
-  mode: "custom",
+  mode: "electric-only",
   showGrid: true,
   showTrail: true,
   showVectors: true,
+  showDecomposition: true,
   demoMode: false,
   preserveTrailOnChange: false,
   timeScale: 1,
@@ -20,6 +22,7 @@ const state = {
     mass: false,
     electric: false,
     magnetic: false,
+    force: false,
     speed: false,
     angle: false
   },
@@ -30,7 +33,7 @@ const state = {
 
 const modeConfigs = {
   custom: {
-    title: "自定义调参"
+    title: "自由调参"
   },
   "electric-only": {
     title: "仅电场",
@@ -41,28 +44,70 @@ const modeConfigs = {
     title: "仅磁场",
     lock: "electric",
     lockedHint: "当前模式下电场固定为 0"
+  },
+  combined: {
+    title: "电磁复合场"
+  },
+  "force-magnetic": {
+    title: "恒力 + 磁场",
+    lockedHint: "当前模式下电场固定为 0，改用外加恒力"
   }
 };
 
 const MAGNETIC_MODE_DEFAULT_B = 1.0;
+const COMBINED_MODE_DEFAULT_E = 3;
+const COMBINED_MODE_DEFAULT_B = 1.0;
+const FORCE_MODE_DEFAULT_F = 4.8;
+const FORCE_UNIT = 1e-14;
+
+const lessonGuides = {
+  custom: {
+    goal: "自由组合参数，比较不同场强下的轨迹差异",
+    prompt: "适合在完成三个标准场景后开放探索。调整参数时先预测轨迹，再运行验证。",
+    formula: "F = q(E + v x B)"
+  },
+  "electric-only": {
+    goal: "观察电场如何让粒子发生偏转",
+    prompt: "改变电荷量 q 或电场强度 E，比较轨迹弯曲方向和弯曲程度。",
+    formula: "F_E = qE"
+  },
+  "magnetic-only": {
+    goal: "观察磁场如何只改变速度方向",
+    prompt: "改变磁感应强度 B 或速度 v，关注圆周半径 r 和周期 T 的变化。",
+    formula: "r = mv / |qB|"
+  },
+  combined: {
+    goal: "观察电场与磁场共同作用下的漂移轨迹",
+    prompt: "比较电场力、磁场力和合力箭头，判断粒子为什么不再只是抛物线或圆。",
+    formula: "F = qE + qv x B"
+  },
+  "force-magnetic": {
+    goal: "把圆周运动和恒力漂移拆开来看",
+    prompt: "恒力不随电荷量改变，漂移方向会随 q 的正负改变；这正是它和 E x B 漂移最值得比较的地方。",
+    formula: "v_d = (F x B) / (qB^2)"
+  }
+};
 
 const refs = {
   chargeInput: document.getElementById("chargeInput"),
   massInput: document.getElementById("massInput"),
   electricInput: document.getElementById("electricInput"),
   magneticInput: document.getElementById("magneticInput"),
+  forceInput: document.getElementById("forceInput"),
   speedInput: document.getElementById("speedInput"),
   angleInput: document.getElementById("angleInput"),
   chargeNumber: document.getElementById("chargeNumber"),
   massNumber: document.getElementById("massNumber"),
   electricNumber: document.getElementById("electricNumber"),
   magneticNumber: document.getElementById("magneticNumber"),
+  forceNumber: document.getElementById("forceNumber"),
   speedNumber: document.getElementById("speedNumber"),
   angleNumber: document.getElementById("angleNumber"),
   chargeValue: document.getElementById("chargeValue"),
   massValue: document.getElementById("massValue"),
   electricValue: document.getElementById("electricValue"),
   magneticValue: document.getElementById("magneticValue"),
+  forceValue: document.getElementById("forceValue"),
   speedValue: document.getElementById("speedValue"),
   angleValue: document.getElementById("angleValue"),
   startButton: document.getElementById("startButton"),
@@ -71,18 +116,26 @@ const refs = {
   canvas: document.getElementById("simCanvas"),
   presetTitle: document.getElementById("presetTitle"),
   presetButtons: Array.from(document.querySelectorAll(".preset-button")),
+  modeGoal: document.getElementById("modeGoal"),
+  modePrompt: document.getElementById("modePrompt"),
+  modeFormula: document.getElementById("modeFormula"),
   electricHint: document.getElementById("electricHint"),
   magneticHint: document.getElementById("magneticHint"),
+  forceHint: document.getElementById("forceHint"),
   metricsModeTitle: document.getElementById("metricsModeTitle"),
   electricForceMetric: document.getElementById("electricForceMetric"),
   magneticForceMetric: document.getElementById("magneticForceMetric"),
+  constantForceMetric: document.getElementById("constantForceMetric"),
   speedMetric: document.getElementById("speedMetric"),
   netForceMetric: document.getElementById("netForceMetric"),
   stageSpeedMetric: document.getElementById("stageSpeedMetric"),
   stageElectricForceMetric: document.getElementById("stageElectricForceMetric"),
   stageMagneticForceMetric: document.getElementById("stageMagneticForceMetric"),
+  stageConstantForceMetric: document.getElementById("stageConstantForceMetric"),
+  stageDriftMetric: document.getElementById("stageDriftMetric"),
   stageNetForceMetric: document.getElementById("stageNetForceMetric"),
   radiusMetric: document.getElementById("radiusMetric"),
+  driftMetric: document.getElementById("driftMetric"),
   periodMetric: document.getElementById("periodMetric"),
   timeMetric: document.getElementById("timeMetric"),
   maxTimeMetric: document.getElementById("maxTimeMetric"),
@@ -93,6 +146,7 @@ const refs = {
   showGridToggle: document.getElementById("showGridToggle"),
   showTrailToggle: document.getElementById("showTrailToggle"),
   showVectorsToggle: document.getElementById("showVectorsToggle"),
+  showDecompositionToggle: document.getElementById("showDecompositionToggle"),
   demoModeToggle: document.getElementById("demoModeToggle"),
   preserveTrailToggle: document.getElementById("preserveTrailToggle"),
   speedButtons: Array.from(document.querySelectorAll(".speed-button")),
@@ -104,6 +158,7 @@ const refs = {
   lockMassButton: document.getElementById("lockMassButton"),
   lockElectricButton: document.getElementById("lockElectricButton"),
   lockMagneticButton: document.getElementById("lockMagneticButton"),
+  lockForceButton: document.getElementById("lockForceButton"),
   lockSpeedButton: document.getElementById("lockSpeedButton"),
   lockAngleButton: document.getElementById("lockAngleButton"),
   exportPngButton: document.getElementById("exportPngButton"),
@@ -149,7 +204,7 @@ function formatSignedFixed(value, digits) {
 }
 
 function setLockButtonState(button, locked) {
-  button.textContent = locked ? "已锁" : "解锁";
+  button.textContent = locked ? "已锁" : "锁定";
   button.classList.toggle("active", locked);
 }
 
@@ -199,6 +254,9 @@ function getInitialVelocityComponents() {
 function getScenarioKey() {
   const hasElectric = Math.abs(state.electric) > 1e-12;
   const hasMagnetic = Math.abs(state.magnetic) > 1e-12;
+  const hasConstantForce = state.mode === "force-magnetic" && Math.abs(state.force) > 1e-12;
+  if (hasConstantForce && hasMagnetic) return "force-magnetic";
+  if (hasConstantForce) return "force";
   if (hasElectric && hasMagnetic) return "combined";
   if (hasElectric) return "electric";
   if (hasMagnetic) return "magnetic";
@@ -206,11 +264,12 @@ function getScenarioKey() {
 }
 
 function updateEquationPanel() {
-  const { q, m, ey, bz } = getPhysicsParams();
+  const { q, m, ey, bz, fy } = getPhysicsParams();
   const { vx0, vy0 } = getInitialVelocityComponents();
   const omega = Math.abs(bz) > 1e-12 ? (q * bz) / m : 0;
   const drift = Math.abs(bz) > 1e-12 ? ey / bz : 0;
   const accel = (q * ey) / m;
+  const forceAccel = fy / m;
   const scenario = getScenarioKey();
 
   refs.equationLines.innerHTML = "";
@@ -247,6 +306,24 @@ function updateEquationPanel() {
     return;
   }
 
+  if (scenario === "force") {
+    refs.equationTitle.textContent = "仅恒力参数方程";
+    refs.equationNote.textContent = "当前磁场为 0，外加恒力使粒子沿力方向做匀加速运动。";
+    addLine(`x(t) = ${formatCoefficient(vx0)} t`);
+    addLine(`y(t) = ${formatCoefficient(vy0)} t + 1/2·(${formatCoefficient(forceAccel)}) t²`);
+    return;
+  }
+
+  if (scenario === "force-magnetic") {
+    const forceDrift = Math.abs(q * bz) > 1e-30 ? fy / (q * bz) : 0;
+    refs.equationTitle.textContent = "恒力与磁场复合运动";
+    refs.equationNote.textContent = "轨迹可看作回旋运动叠加导引中心漂移；恒力漂移方向会随电荷正负改变。";
+    addLine(`ω = ${formatCoefficient(omega)} rad/s`);
+    addLine(`v_d = F_y/(qB) = ${formatCoefficient(forceDrift)} m/s`);
+    addLine(`重点观察：粒子仍在回旋，但回旋中心沿 x 方向缓慢漂移。`);
+    return;
+  }
+
   refs.equationTitle.textContent = "电磁复合场参数方程";
   refs.equationNote.textContent = "当前是匀强电场与匀强磁场共存的参数形式，沿 x 方向存在漂移项。";
   addLine(`ω = ${formatCoefficient(omega)} rad/s`);
@@ -267,39 +344,47 @@ function getInstantKinematics() {
 }
 
 function getLiveVectorState() {
-  const { q, ey, bz } = getPhysicsParams();
+  const { q, ey, bz, fy } = getPhysicsParams();
   const { speed, vx, vy } = getInstantKinematics();
   const electricForceVector = {
     x: 0,
     y: q * ey
+  };
+  const constantForceVector = {
+    x: 0,
+    y: fy
   };
   const magneticForceVector = {
     x: q * vy * bz,
     y: -q * vx * bz
   };
   const netForceVector = {
-    x: electricForceVector.x + magneticForceVector.x,
-    y: electricForceVector.y + magneticForceVector.y
+    x: electricForceVector.x + constantForceVector.x + magneticForceVector.x,
+    y: electricForceVector.y + constantForceVector.y + magneticForceVector.y
   };
 
   return {
     speed,
     velocityVector: { x: vx, y: vy },
     electricForceVector,
+    constantForceVector,
     magneticForceVector,
     netForceVector
   };
 }
 
 function computeLiveMetrics() {
-  const { q, m, ey, bz } = getPhysicsParams();
-  const { speed, velocityVector, electricForceVector, magneticForceVector, netForceVector } = getLiveVectorState();
+  const { q, m, ey, fy, bz } = getPhysicsParams();
+  const { speed, velocityVector, electricForceVector, constantForceVector, magneticForceVector, netForceVector } =
+    getLiveVectorState();
   const electricForce = Math.abs(q * ey);
+  const constantForce = Math.hypot(constantForceVector.x, constantForceVector.y);
   const magneticForce = Math.abs(q * speed * bz);
   const netForce = Math.hypot(netForceVector.x, netForceVector.y);
 
   let radius = null;
   let period = null;
+  let driftSpeed = null;
   let note = "当前显示的是单粒子在所选场景下的瞬时物理量。";
 
   if (state.mode === "magnetic-only" && Math.abs(q) > 0 && Math.abs(bz) > 1e-12) {
@@ -308,18 +393,29 @@ function computeLiveMetrics() {
     note = "仅磁场模式下，半径和周期具有稳定物理意义，可直接对应课本公式。";
   } else if (state.mode === "electric-only") {
     note = "仅电场模式下，粒子沿场方向做加速偏转，重点看电场力和速率变化。";
+  } else if (state.mode === "force-magnetic") {
+    if (Math.abs(q * bz) > 1e-30) {
+      driftSpeed = fy / (q * bz);
+      const relativeSpeed = Math.hypot(velocityVector.x - driftSpeed, velocityVector.y);
+      radius = relativeSpeed / Math.abs((q * bz) / m);
+      period = (2 * Math.PI * m) / (Math.abs(q) * Math.abs(bz));
+    }
+    note = "恒力 + 磁场模式下，橄榄色点是导引中心，虚线圆表示瞬时回旋运动。";
   }
 
   return {
     electricForce,
+    constantForce,
     magneticForce,
     netForce,
     speed,
     radius,
+    driftSpeed,
     period,
     note,
     velocityVector,
     electricForceVector,
+    constantForceVector,
     magneticForceVector,
     netForceVector
   };
@@ -330,14 +426,26 @@ function syncReadouts() {
   refs.massValue.textContent = `${state.mass.toFixed(1)} ×10^-27 kg`;
   refs.electricValue.textContent = `${formatSigned(state.electric)} ×10^5 N/C`;
   refs.magneticValue.textContent = `${formatSignedFixed(state.magnetic, 2)} T`;
+  refs.forceValue.textContent = `${formatSigned(state.force)} ×10^-14 N`;
   refs.speedValue.textContent = `${state.speed.toFixed(1)} ×10^6 m/s`;
   refs.angleValue.textContent = `${state.angle.toFixed(0)}°`;
   refs.presetTitle.textContent = modeConfigs[state.mode].title;
+  const guide = lessonGuides[state.mode];
+  refs.modeGoal.textContent = guide.goal;
+  refs.modePrompt.textContent = guide.prompt;
+  refs.modeFormula.textContent = guide.formula;
   refs.presetButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.mode === state.mode);
   });
-  refs.electricHint.textContent = state.mode === "magnetic-only" ? modeConfigs["magnetic-only"].lockedHint : "";
+  refs.electricHint.textContent =
+    state.mode === "magnetic-only"
+      ? modeConfigs["magnetic-only"].lockedHint
+      : state.mode === "force-magnetic"
+        ? modeConfigs["force-magnetic"].lockedHint
+        : "";
   refs.magneticHint.textContent = state.mode === "electric-only" ? modeConfigs["electric-only"].lockedHint : "";
+  refs.forceHint.textContent =
+    state.mode === "force-magnetic" ? "恒力是外加力，不随电荷量 q 改变" : "仅在“恒力+磁场”模式下启用";
   refs.metricsModeTitle.textContent = modeConfigs[state.mode].title;
   refs.overviewMode.textContent = modeConfigs[state.mode].title;
   refs.overviewSpeed.textContent = `${state.timeScale}x`;
@@ -347,6 +455,7 @@ function syncReadouts() {
   setLockButtonState(refs.lockMassButton, state.locks.mass);
   setLockButtonState(refs.lockElectricButton, state.locks.electric);
   setLockButtonState(refs.lockMagneticButton, state.locks.magnetic);
+  setLockButtonState(refs.lockForceButton, state.locks.force);
   setLockButtonState(refs.lockSpeedButton, state.locks.speed);
   setLockButtonState(refs.lockAngleButton, state.locks.angle);
   refs.recordVideoButton.textContent = state.isRecording ? "停止录制" : "开始录制";
@@ -355,16 +464,22 @@ function syncReadouts() {
   const metrics = computeLiveMetrics();
   refs.electricForceMetric.textContent = formatScientific(metrics.electricForce, 2, "N");
   refs.magneticForceMetric.textContent = formatScientific(metrics.magneticForce, 2, "N");
+  refs.constantForceMetric.textContent = formatScientific(metrics.constantForce, 2, "N");
   refs.speedMetric.textContent = formatScientific(metrics.speed, 2, "m/s");
   refs.netForceMetric.textContent = formatScientific(metrics.netForce, 2, "N");
   refs.stageElectricForceMetric.textContent = formatScientific(metrics.electricForce, 2, "N");
   refs.stageMagneticForceMetric.textContent = formatScientific(metrics.magneticForce, 2, "N");
+  refs.stageConstantForceMetric.textContent = formatScientific(metrics.constantForce, 2, "N");
   refs.stageSpeedMetric.textContent = formatScientific(metrics.speed, 2, "m/s");
+  refs.stageDriftMetric.textContent =
+    metrics.driftSpeed == null ? "仅恒力+磁场适用" : formatScientific(metrics.driftSpeed, 2, "m/s");
   refs.stageNetForceMetric.textContent = formatScientific(metrics.netForce, 2, "N");
   refs.radiusMetric.textContent =
-    metrics.radius == null ? "仅纯磁场圆周时适用" : formatScientific(metrics.radius, 2, "m");
+    metrics.radius == null ? "仅纯磁场或恒力+磁场适用" : formatScientific(metrics.radius, 2, "m");
+  refs.driftMetric.textContent =
+    metrics.driftSpeed == null ? "仅恒力+磁场适用" : formatScientific(metrics.driftSpeed, 2, "m/s");
   refs.periodMetric.textContent =
-    metrics.period == null ? "仅纯磁场圆周时适用" : formatScientific(metrics.period, 2, "s");
+    metrics.period == null ? "仅纯磁场或恒力+磁场适用" : formatScientific(metrics.period, 2, "s");
   refs.timeMetric.textContent = `${state.simulationTime.toFixed(2)} μs`;
   refs.maxTimeMetric.textContent = `${state.maxSimulationTimeUs.toFixed(1)} μs`;
   refs.metricsNote.textContent = metrics.note;
@@ -376,12 +491,14 @@ function syncInputs() {
   refs.massInput.value = state.mass;
   refs.electricInput.value = state.electric;
   refs.magneticInput.value = state.magnetic;
+  refs.forceInput.value = state.force;
   refs.speedInput.value = state.speed;
   refs.angleInput.value = state.angle;
   refs.chargeNumber.value = state.charge;
   refs.massNumber.value = state.mass;
   refs.electricNumber.value = state.electric;
   refs.magneticNumber.value = state.magnetic;
+  refs.forceNumber.value = state.force;
   refs.speedNumber.value = state.speed;
   refs.angleNumber.value = state.angle;
   refs.maxTimeNumber.value = state.maxSimulationTimeUs;
@@ -389,17 +506,20 @@ function syncInputs() {
   refs.massInput.disabled = state.locks.mass;
   refs.speedInput.disabled = state.locks.speed;
   refs.angleInput.disabled = state.locks.angle;
-  refs.electricInput.disabled = state.locks.electric || state.mode === "magnetic-only";
+  refs.electricInput.disabled = state.locks.electric || state.mode === "magnetic-only" || state.mode === "force-magnetic";
   refs.magneticInput.disabled = state.locks.magnetic || state.mode === "electric-only";
+  refs.forceInput.disabled = state.locks.force || state.mode !== "force-magnetic";
   refs.chargeNumber.disabled = state.locks.charge;
   refs.massNumber.disabled = state.locks.mass;
   refs.speedNumber.disabled = state.locks.speed;
   refs.angleNumber.disabled = state.locks.angle;
-  refs.electricNumber.disabled = state.locks.electric || state.mode === "magnetic-only";
+  refs.electricNumber.disabled = state.locks.electric || state.mode === "magnetic-only" || state.mode === "force-magnetic";
   refs.magneticNumber.disabled = state.locks.magnetic || state.mode === "electric-only";
+  refs.forceNumber.disabled = state.locks.force || state.mode !== "force-magnetic";
   refs.showGridToggle.checked = state.showGrid;
   refs.showTrailToggle.checked = state.showTrail;
   refs.showVectorsToggle.checked = state.showVectors;
+  refs.showDecompositionToggle.checked = state.showDecomposition;
   refs.demoModeToggle.checked = state.demoMode;
   refs.preserveTrailToggle.checked = state.preserveTrailOnChange;
   refs.speedButtons.forEach((button) => {
@@ -451,6 +571,9 @@ function applyParameterChange() {
   if (state.mode === "magnetic-only") {
     state.electric = 0;
   }
+  if (state.mode === "force-magnetic") {
+    state.electric = 0;
+  }
 
   if (state.preserveTrailOnChange && particle) {
     syncInputs();
@@ -473,6 +596,23 @@ function applyMode(modeKey) {
       state.magnetic = MAGNETIC_MODE_DEFAULT_B;
     }
   }
+  if (modeKey === "combined") {
+    if (Math.abs(state.electric) < 1e-12) {
+      state.electric = COMBINED_MODE_DEFAULT_E;
+    }
+    if (Math.abs(state.magnetic) < 1e-12) {
+      state.magnetic = COMBINED_MODE_DEFAULT_B;
+    }
+  }
+  if (modeKey === "force-magnetic") {
+    state.electric = 0;
+    if (Math.abs(state.magnetic) < 1e-12) {
+      state.magnetic = MAGNETIC_MODE_DEFAULT_B;
+    }
+    if (Math.abs(state.force) < 1e-12) {
+      state.force = FORCE_MODE_DEFAULT_F;
+    }
+  }
   syncInputs();
   resetSimulation();
 }
@@ -483,15 +623,17 @@ function getPhysicsParams() {
     m: state.mass * MASS_UNIT,
     ex: 0,
     ey: state.electric * ELECTRIC_FIELD_UNIT,
+    fy: state.mode === "force-magnetic" ? state.force * FORCE_UNIT : 0,
     bz: state.magnetic
   };
 }
 
 function getStepConfig() {
-  const { q, m, ey, bz } = getPhysicsParams();
+  const { q, m, ey, fy, bz } = getPhysicsParams();
   const speed = Math.max(state.speed * SPEED_UNIT, 1);
   let dtMag = Infinity;
   let dtElectric = Infinity;
+  let dtForce = Infinity;
 
   if (Math.abs(q) > 0 && Math.abs(bz) > 1e-12) {
     const period = (2 * Math.PI * m) / (Math.abs(q) * Math.abs(bz));
@@ -502,32 +644,29 @@ function getStepConfig() {
   if (accelY > 0) {
     dtElectric = (0.0025 * speed) / accelY;
   }
+  const forceAccelY = Math.abs(fy / m);
+  if (forceAccelY > 0) {
+    dtForce = (0.0025 * speed) / forceAccelY;
+  }
 
-  const dt = Math.min(dtMag, dtElectric, 2e-10);
+  const dt = Math.min(dtMag, dtElectric, dtForce, 2e-10);
   const safeDt = Number.isFinite(dt) ? Math.min(Math.max(dt, 2e-13), 2e-10) : 1e-10;
 
   let steps = 14;
   if (Math.abs(bz) > 3) steps = 20;
-  if (Math.abs(ey) > 8 * ELECTRIC_FIELD_UNIT) steps = Math.max(steps, 18);
+  if (Math.abs(ey) > 8 * ELECTRIC_FIELD_UNIT || Math.abs(fy) > 8 * FORCE_UNIT) steps = Math.max(steps, 18);
 
   return { dt: safeDt, steps };
 }
 
 function borisAdvance(dt) {
-  const { q, m, ex, ey, bz } = getPhysicsParams();
-
-  if (q === 0) {
-    particle.x += particle.vx * dt;
-    particle.y += particle.vy * dt;
-    return;
-  }
-
+  const { q, m, ex, ey, fy, bz } = getPhysicsParams();
   const qm = q / m;
-  const halfEx = qm * ex * dt * 0.5;
-  const halfEy = qm * ey * dt * 0.5;
+  const halfAx = ((q * ex) / m) * dt * 0.5;
+  const halfAy = ((q * ey + fy) / m) * dt * 0.5;
 
-  let vxMinus = particle.vx + halfEx;
-  let vyMinus = particle.vy + halfEy;
+  let vxMinus = particle.vx + halfAx;
+  let vyMinus = particle.vy + halfAy;
 
   const tz = qm * bz * dt * 0.5;
   const sz = (2 * tz) / (1 + tz * tz);
@@ -538,8 +677,8 @@ function borisAdvance(dt) {
   const vxPlus = vxMinus + vyPrime * sz;
   const vyPlus = vyMinus - vxPrime * sz;
 
-  particle.vx = vxPlus + halfEx;
-  particle.vy = vyPlus + halfEy;
+  particle.vx = vxPlus + halfAx;
+  particle.vy = vyPlus + halfAy;
   particle.x += particle.vx * dt;
   particle.y += particle.vy * dt;
 }
@@ -585,7 +724,18 @@ function getBounds() {
     };
   }
 
+  const decomposition = getMotionDecomposition();
   const points = [...path, { x: 0, y: 0 }];
+  if (decomposition) {
+    points.push(
+      decomposition.center,
+      decomposition.initialCenter,
+      { x: decomposition.center.x + decomposition.radius, y: decomposition.center.y },
+      { x: decomposition.center.x - decomposition.radius, y: decomposition.center.y },
+      { x: decomposition.center.x, y: decomposition.center.y + decomposition.radius },
+      { x: decomposition.center.x, y: decomposition.center.y - decomposition.radius }
+    );
+  }
   let minX = points[0].x;
   let maxX = points[0].x;
   let minY = points[0].y;
@@ -822,6 +972,100 @@ function drawPath(bounds) {
   ctx.stroke();
 }
 
+function getMotionDecomposition() {
+  if (!particle || state.mode !== "force-magnetic") {
+    return null;
+  }
+
+  const { q, m, fy, bz } = getPhysicsParams();
+  if (Math.abs(q * bz) < 1e-30) {
+    return null;
+  }
+
+  const omega = (q * bz) / m;
+  const driftVelocity = fy / (q * bz);
+  const relativeVelocity = {
+    x: particle.vx - driftVelocity,
+    y: particle.vy
+  };
+  const center = {
+    x: particle.x + relativeVelocity.y / omega,
+    y: particle.y - relativeVelocity.x / omega
+  };
+
+  const { vx0, vy0 } = getInitialVelocityComponents();
+  const initialRelativeVelocity = {
+    x: vx0 - driftVelocity,
+    y: vy0
+  };
+  const initialCenter = {
+    x: initialRelativeVelocity.y / omega,
+    y: -initialRelativeVelocity.x / omega
+  };
+
+  return {
+    center,
+    initialCenter,
+    driftVelocity,
+    radius: Math.hypot(relativeVelocity.x, relativeVelocity.y) / Math.abs(omega)
+  };
+}
+
+function drawMotionDecomposition(bounds) {
+  if (!state.showDecomposition) {
+    return;
+  }
+
+  const decomposition = getMotionDecomposition();
+  if (!decomposition) {
+    return;
+  }
+
+  const center = worldToCanvas(decomposition.center, bounds);
+  const start = worldToCanvas(decomposition.initialCenter, bounds);
+  const edge = worldToCanvas(
+    {
+      x: decomposition.center.x + decomposition.radius,
+      y: decomposition.center.y
+    },
+    bounds
+  );
+  const radiusPx = Math.max(3, Math.abs(edge.x - center.x));
+  const centerRadius = state.demoMode ? 7 : 5;
+
+  ctx.save();
+  ctx.setLineDash([8, 7]);
+  ctx.strokeStyle = "rgba(95, 111, 47, 0.48)";
+  ctx.lineWidth = state.demoMode ? 2.4 : 1.8;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, radiusPx, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(95, 111, 47, 0.72)";
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(center.x, center.y);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = "#5f6f2f";
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, centerRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = `${state.demoMode ? 16 : 12}px "Avenir Next", "PingFang SC", sans-serif`;
+  ctx.fillText("导引中心", center.x + 9, center.y - 10);
+
+  drawArrow(
+    decomposition.center,
+    { x: decomposition.driftVelocity, y: 0 },
+    bounds,
+    "#5f6f2f",
+    "v_d",
+    state.demoMode ? 58 : 42
+  );
+}
+
 function getPathExtent() {
   if (path.length <= 1) {
     return 0;
@@ -912,6 +1156,7 @@ function drawVectors(bounds) {
 
   const maxForceMagnitude = Math.max(
     Math.hypot(metrics.electricForceVector.x, metrics.electricForceVector.y),
+    Math.hypot(metrics.constantForceVector.x, metrics.constantForceVector.y),
     Math.hypot(metrics.magneticForceVector.x, metrics.magneticForceVector.y),
     Math.hypot(metrics.netForceVector.x, metrics.netForceVector.y),
     1e-30
@@ -949,6 +1194,14 @@ function drawVectors(bounds) {
   );
   drawArrow(
     anchor,
+    metrics.constantForceVector,
+    bounds,
+    "#5f6f2f",
+    "F恒",
+    getDynamicArrowLength(Math.hypot(metrics.constantForceVector.x, metrics.constantForceVector.y), maxForceMagnitude, forceMin, forceMax)
+  );
+  drawArrow(
+    anchor,
     metrics.netForceVector,
     bounds,
     "#7b3fa0",
@@ -979,6 +1232,7 @@ function renderScene() {
   const bounds = getBounds();
   drawBackground(bounds);
   drawPath(bounds);
+  drawMotionDecomposition(bounds);
   drawVectors(bounds);
   drawParticle(bounds);
 }
@@ -1018,12 +1272,14 @@ bindInput(refs.chargeInput, "charge");
 bindInput(refs.massInput, "mass");
 bindInput(refs.electricInput, "electric");
 bindInput(refs.magneticInput, "magnetic");
+bindInput(refs.forceInput, "force");
 bindInput(refs.speedInput, "speed");
 bindInput(refs.angleInput, "angle");
 bindNumberInput(refs.chargeNumber, "charge");
 bindNumberInput(refs.massNumber, "mass");
 bindNumberInput(refs.electricNumber, "electric");
 bindNumberInput(refs.magneticNumber, "magnetic");
+bindNumberInput(refs.forceNumber, "force");
 bindNumberInput(refs.speedNumber, "speed");
 bindNumberInput(refs.angleNumber, "angle");
 
@@ -1053,6 +1309,11 @@ refs.showTrailToggle.addEventListener("change", (event) => {
 
 refs.showVectorsToggle.addEventListener("change", (event) => {
   state.showVectors = event.target.checked;
+  renderScene();
+});
+
+refs.showDecompositionToggle.addEventListener("change", (event) => {
+  state.showDecomposition = event.target.checked;
   renderScene();
 });
 
@@ -1106,6 +1367,7 @@ refs.exportCsvButton.addEventListener("click", () => {
     `# mass_1e-27kg,${state.mass}`,
     `# electric_1e5N_per_C,${state.electric}`,
     `# magnetic_T,${state.magnetic}`,
+    `# constant_force_1e-14N,${state.force}`,
     `# speed_1e6m_per_s,${state.speed}`,
     `# angle_deg,${state.angle}`,
     "index,x_m,y_m"
@@ -1191,6 +1453,7 @@ bindLockButton(refs.lockChargeButton, "charge");
 bindLockButton(refs.lockMassButton, "mass");
 bindLockButton(refs.lockElectricButton, "electric");
 bindLockButton(refs.lockMagneticButton, "magnetic");
+bindLockButton(refs.lockForceButton, "force");
 bindLockButton(refs.lockSpeedButton, "speed");
 bindLockButton(refs.lockAngleButton, "angle");
 

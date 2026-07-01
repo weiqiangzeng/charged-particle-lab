@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>带电粒子在电场与磁场中的运动虚拟实验台</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260701-decompose" />
   </head>
   <body>
     <main class="app">
@@ -21,18 +21,28 @@
               <button id="resetButton" type="button">重置</button>
             </div>
           </div>
-          <p class="stage-subtitle">用于演示带电粒子在电场、磁场及电磁复合场中的运动规律，并支持课堂探究、数据导出与演示录制。</p>
+          <p class="stage-subtitle">从一个清晰场景开始，观察电场力、磁场力如何改变带电粒子的速度方向与轨迹形状。</p>
           <div class="preset-bar">
             <div class="preset-copy">
               <span class="preset-label">场景模式</span>
-              <strong id="presetTitle">自定义调参</strong>
+              <strong id="presetTitle">仅电场</strong>
             </div>
             <div class="preset-buttons">
-              <button class="preset-button active" type="button" data-mode="custom">自定义</button>
-              <button class="preset-button" type="button" data-mode="electric-only">仅电场</button>
+              <button class="preset-button active" type="button" data-mode="electric-only">仅电场</button>
               <button class="preset-button" type="button" data-mode="magnetic-only">仅磁场</button>
+              <button class="preset-button" type="button" data-mode="combined">复合场</button>
+              <button class="preset-button" type="button" data-mode="force-magnetic">恒力+磁场</button>
+              <button class="preset-button" type="button" data-mode="custom">自由</button>
             </div>
           </div>
+          <section class="lesson-guide" aria-label="当前观察任务">
+            <div class="guide-main">
+              <span class="preset-label">观察任务</span>
+              <strong id="modeGoal">观察电场如何让粒子发生偏转</strong>
+              <p id="modePrompt">改变电荷量 q 或电场强度 E，比较轨迹弯曲方向和弯曲程度。</p>
+            </div>
+            <div class="guide-formula" id="modeFormula">F_E = qE</div>
+          </section>
           <div class="canvas-wrap">
             <canvas id="simCanvas" width="980" height="640" aria-label="带电粒子运动轨迹"></canvas>
           </div>
@@ -50,6 +60,14 @@
               <strong id="stageMagneticForceMetric">0 N</strong>
             </article>
             <article class="stage-readout">
+              <span>F恒</span>
+              <strong id="stageConstantForceMetric">0 N</strong>
+            </article>
+            <article class="stage-readout">
+              <span>v_d</span>
+              <strong id="stageDriftMetric">仅恒力+磁场适用</strong>
+            </article>
+            <article class="stage-readout">
               <span>F合</span>
               <strong id="stageNetForceMetric">0 N</strong>
             </article>
@@ -60,6 +78,8 @@
             <span class="legend-item"><i class="legend-dot velocity-dot"></i>速度</span>
             <span class="legend-item"><i class="legend-dot electric-dot"></i>电场力</span>
             <span class="legend-item"><i class="legend-dot magnetic-dot"></i>磁场力</span>
+            <span class="legend-item"><i class="legend-dot constant-dot"></i>恒力</span>
+            <span class="legend-item"><i class="legend-dot drift-dot"></i>导引中心</span>
             <span class="legend-item"><i class="legend-dot net-dot"></i>合力</span>
           </div>
         </div>
@@ -67,17 +87,17 @@
         <aside class="controls">
           <div class="controls-overview">
             <div>
-              <span class="preset-label">参数与读数</span>
+              <span class="preset-label">实验控制</span>
               <h2>教学实验控制台</h2>
             </div>
             <div class="overview-badges">
-              <span class="overview-badge" id="overviewMode">自定义调参</span>
+              <span class="overview-badge" id="overviewMode">仅电场</span>
               <span class="overview-badge" id="overviewSpeed">1x</span>
             </div>
           </div>
           <details class="section-panel" open>
             <summary class="section-summary">
-              <span>参数与读数</span>
+              <span>核心参数</span>
             </summary>
             <div class="section-body">
               <details class="subsection-panel" open>
@@ -97,7 +117,7 @@
                       </div>
                       <div class="value-lock">
                         <strong id="chargeValue">+1 e</strong>
-                        <button class="mini-lock" id="lockChargeButton" type="button">解锁</button>
+                        <button class="mini-lock" id="lockChargeButton" type="button">锁定</button>
                       </div>
                     </div>
                     <input id="chargeInput" type="range" min="-6" max="6" step="1" value="1" />
@@ -133,7 +153,7 @@
                       </div>
                       <div class="value-lock">
                         <strong id="massValue">1.5 ×10^-27 kg</strong>
-                        <button class="mini-lock" id="lockMassButton" type="button">解锁</button>
+                        <button class="mini-lock" id="lockMassButton" type="button">锁定</button>
                       </div>
                     </div>
                     <input id="massInput" type="range" min="0.5" max="10" step="0.1" value="1.5" />
@@ -169,7 +189,7 @@
                       </div>
                       <div class="value-lock">
                         <strong id="electricValue">+3.0 ×10^5 N/C</strong>
-                        <button class="mini-lock" id="lockElectricButton" type="button">解锁</button>
+                        <button class="mini-lock" id="lockElectricButton" type="button">锁定</button>
                       </div>
                     </div>
                     <div class="mode-hint" id="electricHint"></div>
@@ -197,7 +217,7 @@
                       </div>
                       <div class="value-lock">
                         <strong id="magneticValue">0.00 T</strong>
-                        <button class="mini-lock" id="lockMagneticButton" type="button">解锁</button>
+                        <button class="mini-lock" id="lockMagneticButton" type="button">锁定</button>
                       </div>
                     </div>
                     <div class="mode-hint" id="magneticHint"></div>
@@ -205,6 +225,46 @@
                     <div class="inline-edit">
                       <input id="magneticNumber" class="number-input" type="number" min="-8" max="8" step="0.05" value="0" />
                       <span class="input-unit">T</span>
+                    </div>
+                  </label>
+
+                  <label class="control">
+                    <div class="label-row">
+                      <div class="label-copy">
+                        <span class="label-title">外加恒力</span>
+                        <span class="label-math">
+                          <math>
+                            <msub>
+                              <mi>F</mi>
+                              <mi>y</mi>
+                            </msub>
+                            <mo>/</mo>
+                            <mrow>
+                              <mo>(</mo>
+                              <mo>&times;</mo>
+                              <msup>
+                                <mn>10</mn>
+                                <mrow>
+                                  <mo>-</mo>
+                                  <mn>14</mn>
+                                </mrow>
+                              </msup>
+                              <mtext> N</mtext>
+                              <mo>)</mo>
+                            </mrow>
+                          </math>
+                        </span>
+                      </div>
+                      <div class="value-lock">
+                        <strong id="forceValue">+4.8 ×10^-14 N</strong>
+                        <button class="mini-lock" id="lockForceButton" type="button">锁定</button>
+                      </div>
+                    </div>
+                    <div class="mode-hint" id="forceHint"></div>
+                    <input id="forceInput" type="range" min="-24" max="24" step="0.1" value="4.8" />
+                    <div class="inline-edit">
+                      <input id="forceNumber" class="number-input" type="number" min="-24" max="24" step="0.1" value="4.8" />
+                      <span class="input-unit">×10^-14 N</span>
                     </div>
                   </label>
 
@@ -234,7 +294,7 @@
                       </div>
                       <div class="value-lock">
                         <strong id="speedValue">8.0 ×10^6 m/s</strong>
-                        <button class="mini-lock" id="lockSpeedButton" type="button">解锁</button>
+                        <button class="mini-lock" id="lockSpeedButton" type="button">锁定</button>
                       </div>
                     </div>
                     <input id="speedInput" type="range" min="1" max="28" step="0.1" value="8" />
@@ -258,7 +318,7 @@
                       </div>
                       <div class="value-lock">
                         <strong id="angleValue">0°</strong>
-                        <button class="mini-lock" id="lockAngleButton" type="button">解锁</button>
+                        <button class="mini-lock" id="lockAngleButton" type="button">锁定</button>
                       </div>
                     </div>
                     <input id="angleInput" type="range" min="-85" max="85" step="0.5" value="0" />
@@ -298,6 +358,14 @@
                       <article class="metric-card">
                         <span class="metric-name">
                           <math>
+                            <msub><mi>F</mi><mtext>恒</mtext></msub>
+                          </math>
+                        </span>
+                        <strong id="constantForceMetric">0 N</strong>
+                      </article>
+                      <article class="metric-card">
+                        <span class="metric-name">
+                          <math>
                             <mi>v</mi>
                           </math>
                         </span>
@@ -318,6 +386,14 @@
                           </math>
                         </span>
                         <strong id="radiusMetric">--</strong>
+                      </article>
+                      <article class="metric-card">
+                        <span class="metric-name">
+                          <math>
+                            <msub><mi>v</mi><mi>d</mi></msub>
+                          </math>
+                        </span>
+                        <strong id="driftMetric">--</strong>
                       </article>
                       <article class="metric-card">
                         <span class="metric-name">
@@ -367,9 +443,9 @@
             </div>
           </details>
 
-          <details class="section-panel">
+          <details class="section-panel advanced-panel">
             <summary class="section-summary">
-              <span>显示选项</span>
+              <span>显示与导出</span>
             </summary>
             <div class="section-body">
               <details class="subsection-panel" open>
@@ -388,6 +464,10 @@
                       <label class="toggle-item">
                         <input id="showVectorsToggle" type="checkbox" checked />
                         <span>显示箭头</span>
+                      </label>
+                      <label class="toggle-item">
+                        <input id="showDecompositionToggle" type="checkbox" checked />
+                        <span>显示运动分解</span>
                       </label>
                       <label class="toggle-item">
                         <input id="demoModeToggle" type="checkbox" />
@@ -445,6 +525,6 @@
       </section>
     </main>
 
-    <script src="./script.js"></script>
+    <script src="./script.js?v=20260701-decompose"></script>
   </body>
 </html>

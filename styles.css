@@ -29,6 +29,7 @@ body {
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
+  align-items: start;
   gap: 22px;
 }
 
@@ -141,7 +142,7 @@ body.demo-mode .canvas-wrap {
 
 .stage-readouts {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -232,6 +233,14 @@ body.demo-mode .controls-overview h2 {
   background: #c96b29;
 }
 
+.constant-dot {
+  background: #5f6f2f;
+}
+
+.drift-dot {
+  background: #879342;
+}
+
 .net-dot {
   background: #7b3fa0;
 }
@@ -283,6 +292,48 @@ body.demo-mode .controls-overview h2 {
   border-color: transparent;
 }
 
+.lesson-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(13, 113, 104, 0.16);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(13, 113, 104, 0.1), rgba(31, 120, 180, 0.08));
+}
+
+.guide-main {
+  display: grid;
+  gap: 6px;
+}
+
+.guide-main strong {
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.guide-main p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.guide-formula {
+  min-width: 150px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(19, 31, 35, 0.08);
+  color: var(--ink);
+  font-family: "Times New Roman", "Cambria Math", serif;
+  font-size: 1.05rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
 #simCanvas {
   display: block;
   width: 100%;
@@ -295,6 +346,9 @@ body.demo-mode .controls-overview h2 {
   position: sticky;
   top: 18px;
   align-self: start;
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  scrollbar-width: thin;
 }
 
 .controls-overview {
@@ -772,6 +826,17 @@ input[type="range"]::-webkit-slider-thumb {
 
   .preset-buttons {
     justify-content: flex-start;
+  }
+
+  .lesson-guide {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .guide-formula {
+    min-width: 0;
+    width: 100%;
+    text-align: left;
   }
 
   .stage-readouts {
